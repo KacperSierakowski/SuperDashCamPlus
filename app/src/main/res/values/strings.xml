@@ -1,7 +1,12 @@
 <resources>
-    <string name="app_name">TestDashCam</string>
+    <string name="app_name">DashCam+</string>
     <string name="action_settings">Settings</string>
     <string name="title_activity_settings">Settings</string>
+
+
+    <!-- Strings related to Speedometer -->
+
+    <string name="initial_speed">0.0 m/s</string>
 
     <!-- Strings related to Settings -->
 

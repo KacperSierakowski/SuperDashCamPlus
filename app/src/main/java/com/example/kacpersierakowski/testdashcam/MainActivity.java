@@ -16,6 +16,9 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.media.CamcorderProfile;
 import android.media.Image;
 import android.media.ImageReader;
@@ -27,14 +30,14 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.view.MenuInflater;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -42,6 +45,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Chronometer;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
@@ -56,16 +60,13 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
-
-
+public class MainActivity extends AppCompatActivity implements LocationListener {
 
     private static final String TAG = "Camera2VideoImageActivi";
     private static final int REQUEST_CAMERA_PERMISSION_RESULT = 0;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT = 1;
     private static final int STATE_PREVIEW = 0;
     private static final int STATE_WAIT_LOCK = 1;
-
 
     private int mCaptureState = STATE_PREVIEW;
 
@@ -76,13 +77,16 @@ public class MainActivity extends AppCompatActivity {
             setupCamera(width, height);
             connectCamera();
         }
+
         @Override
         public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
         }
+
         @Override
         public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
             return false;
         }
+
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         }
@@ -93,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
         public void onOpened(CameraDevice camera) {
             mCameraDevice = camera;
             mMediaRecorder = new MediaRecorder();
-            if(mIsRecording) {
+            if (mIsRecording) {
                 try {
                     createVideoFileName();
                 } catch (IOException e) {
@@ -129,7 +133,6 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-
     private HandlerThread mBackgroundHandlerThread;
     private Handler mBackgroundHandler;
     private String mCameraId;
@@ -140,8 +143,43 @@ public class MainActivity extends AppCompatActivity {
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new
             ImageReader.OnImageAvailableListener() {
                 @Override
-                public void onImageAvailable(ImageReader reader) {mBackgroundHandler.post(new ImageSaver(reader.acquireLatestImage()));}
+                public void onImageAvailable(ImageReader reader) {
+                    mBackgroundHandler.post(new ImageSaver(reader.acquireLatestImage()));
+                }
             };
+
+    //SPEEDOMETER/////////////////////////////////////////////////
+    @Override
+    public void onLocationChanged(Location location) {
+
+        TextView myTextViewSpeedometer=(TextView)findViewById(R.id.textView);
+
+
+
+        if(location==null){
+            myTextViewSpeedometer.setText("----- m/s");
+        }else{
+            float myCorrentSpeed=location.getSpeed();//w metrach na sekundy
+            //Zamiana na k/h
+            float myCorrentSpeedKh=myCorrentSpeed;
+
+            myTextViewSpeedometer.setText(myCorrentSpeed+" m/s");
+        }
+    }
+    @Override
+    public void onStatusChanged(String s, int i, Bundle bundle) {
+
+    }
+    @Override
+    public void onProviderEnabled(String s) {
+
+    }
+    @Override
+    public void onProviderDisabled(String s) {
+
+    }
+    /////////////////////////////////////////////////////////////
+
     private class ImageSaver implements Runnable {
 
         private final Image mImage;
@@ -169,7 +207,7 @@ public class MainActivity extends AppCompatActivity {
                 mediaStoreUpdateIntent.setData(Uri.fromFile(new File(mImageFileName)));
                 sendBroadcast(mediaStoreUpdateIntent);
 
-                if(fileOutputStream != null) {
+                if (fileOutputStream != null) {
                     try {
                         fileOutputStream.close();
                     } catch (IOException e) {
@@ -196,7 +234,7 @@ public class MainActivity extends AppCompatActivity {
                 case STATE_WAIT_LOCK:
                     mCaptureState = STATE_PREVIEW;
                     Integer afState = captureResult.get(CaptureResult.CONTROL_AF_STATE);
-                    if(afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
+                    if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
                             afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
                         Toast.makeText(getApplicationContext(), "Pstryk!", Toast.LENGTH_SHORT).show();
                         startStillCaptureRequest();
@@ -204,6 +242,7 @@ public class MainActivity extends AppCompatActivity {
                     break;
             }
         }
+
         @Override
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
             super.onCaptureCompleted(session, request, result);
@@ -222,7 +261,7 @@ public class MainActivity extends AppCompatActivity {
                 case STATE_WAIT_LOCK:
                     mCaptureState = STATE_PREVIEW;
                     Integer afState = captureResult.get(CaptureResult.CONTROL_AF_STATE);
-                    if(afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
+                    if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
                             afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
                         Toast.makeText(getApplicationContext(), "Pstryk Pstryk", Toast.LENGTH_SHORT).show();
                         startStillCaptureRequest();
@@ -259,19 +298,27 @@ public class MainActivity extends AppCompatActivity {
         ORIENTATIONS.append(Surface.ROTATION_180, 270);
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
+
     private static class CompareSizeByArea implements Comparator<Size> {
         @Override
         public int compare(Size lhs, Size rhs) {
-            return Long.signum( (long)(lhs.getWidth() * lhs.getHeight()) -
-                    (long)(rhs.getWidth() * rhs.getHeight()));
+            return Long.signum((long) (lhs.getWidth() * lhs.getHeight()) -
+                    (long) (rhs.getWidth() * rhs.getHeight()));
         }
     }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
+        //getMenuInflater().inflate(R.menu.menu_main, menu);
+
+        //super.onCreateOptionsMenu(menu);
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_main, menu);
+
         return true;
     }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -283,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
         if (id == R.id.action_settings) {
 
             //W przypadku wejscia do ustawien wlacza drugie activity
-            Intent intent = new Intent(this,SettingsActivity.class);
+            Intent intent = new Intent(this, SettingsActivity.class);
             startActivity(intent);
 
             return true;
@@ -291,6 +338,7 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
     @SuppressLint("WrongViewCast")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -298,8 +346,32 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        //Menu menu=(Menu)findViewById(R.id.action_settings);
+        //MenuInflater inflater = getMenuInflater();
+        //inflater.inflate(R.menu.menu_main, menu);
 
-        setContentView(R.layout.content_main);
+        //Blad,ktory powodowal znikanie menu:
+        // setContentView(R.layout.activity_main);   <-------------------------
+
+
+        LocationManager myLocationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+
+        myLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+        //0,0 - jak najszybciej sie da, czestotliwosc z jaka bedzie uaktualniane - UWAGA NA BATERIE
+        this.onLocationChanged(null);
+
+
 
         createVideoFolder();
         createImageFolder();
@@ -318,6 +390,7 @@ public class MainActivity extends AppCompatActivity {
         });
         mRecordImageButton = (ImageButton) findViewById(R.id.videoOnlineImageButton);
         mRecordImageButton.setOnClickListener(new View.OnClickListener() {
+
             @Override
             public void onClick(View v) {
                 if (mIsRecording || mIsTimelapse) {
@@ -336,7 +409,6 @@ public class MainActivity extends AppCompatActivity {
                     Intent mediaStoreUpdateIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
                     mediaStoreUpdateIntent.setData(Uri.fromFile(new File(mVideoFileName)));
                     sendBroadcast(mediaStoreUpdateIntent);
-
                 } else {
                     mIsRecording = true;
                     mRecordImageButton.setImageResource(R.mipmap.btn_video_busy);
@@ -352,9 +424,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
         startBackgroundThread();
-
         if(mTextureView.isAvailable()) {
             setupCamera(mTextureView.getWidth(), mTextureView.getHeight());
             connectCamera();
@@ -362,6 +432,7 @@ public class MainActivity extends AppCompatActivity {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
