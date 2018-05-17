@@ -62,11 +62,14 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements LocationListener {
 
+    private static int SPLASH_TIME_OUT=2000;//1 000 => 1 sekunda
+
     private static final String TAG = "Camera2VideoImageActivi";
     private static final int REQUEST_CAMERA_PERMISSION_RESULT = 0;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT = 1;
     private static final int STATE_PREVIEW = 0;
     private static final int STATE_WAIT_LOCK = 1;
+
 
     private int mCaptureState = STATE_PREVIEW;
 
@@ -352,6 +355,21 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
         //Blad,ktory powodowal znikanie menu:
         // setContentView(R.layout.activity_main);   <-------------------------
+
+
+
+        //Powitalne Activity
+        /*
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                Intent WelcomeIntent=new Intent(MainActivity.this,WelcomeActivity.class);
+                startActivity(WelcomeIntent);
+                finish();
+            }
+        },SPLASH_TIME_OUT);
+        */
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
         LocationManager myLocationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
