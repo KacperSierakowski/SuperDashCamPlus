@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
@@ -30,6 +31,8 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
+import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -62,14 +65,11 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements LocationListener {
 
-    private static int SPLASH_TIME_OUT=2000;//1 000 => 1 sekunda
-
     private static final String TAG = "Camera2VideoImageActivi";
     private static final int REQUEST_CAMERA_PERMISSION_RESULT = 0;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT = 1;
     private static final int STATE_PREVIEW = 0;
     private static final int STATE_WAIT_LOCK = 1;
-
 
     private int mCaptureState = STATE_PREVIEW;
 
@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     private CameraDevice mCameraDevice;
     private CameraDevice.StateCallback mCameraDeviceStateCallback = new CameraDevice.StateCallback() {
         @Override
-        public void onOpened(CameraDevice camera) {
+        public void onOpened(@NonNull CameraDevice camera) {
             mCameraDevice = camera;
             mMediaRecorder = new MediaRecorder();
             if (mIsRecording) {
@@ -150,15 +150,11 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                     mBackgroundHandler.post(new ImageSaver(reader.acquireLatestImage()));
                 }
             };
-
     //SPEEDOMETER/////////////////////////////////////////////////
     @Override
     public void onLocationChanged(Location location) {
 
         TextView myTextViewSpeedometer=(TextView)findViewById(R.id.textView);
-
-
-
         if(location==null){
             myTextViewSpeedometer.setText("----- m/s");
         }else{
@@ -171,7 +167,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     }
     @Override
     public void onStatusChanged(String s, int i, Bundle bundle) {
-
     }
     @Override
     public void onProviderEnabled(String s) {
@@ -180,6 +175,24 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     @Override
     public void onProviderDisabled(String s) {
 
+    }
+
+    public void ShowSettingsButtonListner(View view) {
+
+        SharedPreferences prefs= PreferenceManager.getDefaultSharedPreferences(this);
+        String sSetting=prefs.getString("example_list_dlugosc_nagran","xxx");
+        String x1="1";
+        if (sSetting.compareTo( x1 ) == 0) {
+                    Toast.makeText(this,"30 sekund",Toast.LENGTH_LONG).show();
+        }else if(sSetting.compareTo( "0") == 0){
+                    Toast.makeText(this,"60 sekund",Toast.LENGTH_LONG).show();
+        }else if(sSetting.compareTo( "-1") == 0){
+                    Toast.makeText(this,"90 sekund",Toast.LENGTH_LONG).show();
+        }else{
+            //do nothing
+            Toast.makeText(this,"dziaba dziaba",Toast.LENGTH_LONG).show();
+            //Toast.makeText(this,sSetting.toString(),Toast.LENGTH_LONG).show();
+        }
     }
     /////////////////////////////////////////////////////////////
 
@@ -224,8 +237,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
     private MediaRecorder mMediaRecorder;
     private Chronometer mChronometer;
-
     private int mTotalRotation;
+
     private CameraCaptureSession mPreviewCaptureSession;
     private CameraCaptureSession.CaptureCallback mPreviewCaptureCallback = new CameraCaptureSession.CaptureCallback() {
 
@@ -294,14 +307,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     private String mImageFileName;
 
     private static SparseIntArray ORIENTATIONS = new SparseIntArray();
-
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
         ORIENTATIONS.append(Surface.ROTATION_90, 0);
         ORIENTATIONS.append(Surface.ROTATION_180, 270);
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
-
     private static class CompareSizeByArea implements Comparator<Size> {
         @Override
         public int compare(Size lhs, Size rhs) {
@@ -309,7 +320,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                     (long) (rhs.getWidth() * rhs.getHeight()));
         }
     }
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -321,7 +331,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
         return true;
     }
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -341,13 +350,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
         return super.onOptionsItemSelected(item);
     }
-
     @SuppressLint("WrongViewCast")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         //Menu menu=(Menu)findViewById(R.id.action_settings);
         //MenuInflater inflater = getMenuInflater();
@@ -356,9 +364,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         //Blad,ktory powodowal znikanie menu:
         // setContentView(R.layout.activity_main);   <-------------------------
 
-
-
-        //Powitalne Activity
+        //Powitalne Activity  /// REZYGNACJA Z Handlera----> EasySplashSCREEN
         /*
         new Handler().postDelayed(new Runnable() {
             @Override
@@ -369,11 +375,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
             }
         },SPLASH_TIME_OUT);
         */
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        //          SPEEDOMETER
         LocationManager myLocationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
@@ -384,12 +388,10 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-
         myLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
         //0,0 - jak najszybciej sie da, czestotliwosc z jaka bedzie uaktualniane - UWAGA NA BATERIE
         this.onLocationChanged(null);
-
-
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
         createVideoFolder();
         createImageFolder();
@@ -406,9 +408,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 lockFocus();
             }
         });
+
+        SharedPreferences prefs= PreferenceManager.getDefaultSharedPreferences(this);
+        String sSetting=prefs.getString("example_list_dlugosc_nagran","xxx");
+
         mRecordImageButton = (ImageButton) findViewById(R.id.videoOnlineImageButton);
         mRecordImageButton.setOnClickListener(new View.OnClickListener() {
-
             @Override
             public void onClick(View v) {
                 if (mIsRecording || mIsTimelapse) {
@@ -434,8 +439,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 }
             }
         });
-
-
     }
 
     //////////////////////////////////////////
